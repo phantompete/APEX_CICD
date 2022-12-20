@@ -49,7 +49,7 @@ jobs:
     # Initialize a new or existing Terraform working directory
     - name: Terraform Init
       working-directory: ./terraform
-      run: terraform init -backend-config="access_key=a5de553ad15018893b155f2c05acb372fec828f0" -backend-config="secret_key=M6WaS+az37h1qsRcPrjTWc0uQzSv4djZ0/baEwLCCwQ=" -backend-config="region=eu-frankfurt-1"
+      run: terraform init -backend-config="access_key=10236becc37abebc33bd1af95b10e9f0820f8bf0" -backend-config="secret_key=5sYHbk13o8yAbfNpe/uE1R1y/Ew1jCkaCUJCtsLeVB8=" -backend-config="region=eu-frankfurt-1"
 
     # Checks that all Terraform configuration files adhere to a canonical format
     #- name: Terraform Format
