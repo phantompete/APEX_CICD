@@ -1,0 +1,129 @@
+name: 'Workflow'
+on: 
+  delete:
+    branches-ignore:
+      - main  
+  push:
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+env:    
+  # OCI API Access
+  TF_VAR_region: ${{ secrets.TF_VAR_REGION }}
+  TF_VAR_private_key: ${{ secrets.TF_VAR_PRIVATE_KEY }}
+  TF_VAR_tenancy_ocid: ${{ secrets.TF_VAR_TENANCY_OCID }}
+  TF_VAR_user_ocid: ${{ secrets.TF_VAR_USER_OCID }}
+  TF_VAR_fingerprint: ${{ secrets.TF_VAR_FINGERPRINT }}
+
+  # Remote Backend Access
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+
+  DELETE_BRANCH: ${{ github.event.ref }} 
+  CREATE_BRANCH: ${{ github.ref_name }}
+
+jobs:
+  build_and_deploy:
+    name: "${{ github.event_name }}"
+    runs-on: ubuntu-latest
+
+    # Use the Bash shell
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    # Install the latest version of Terraform CLI
+    - name: HashiCorp - Setup Terraform
+      uses: hashicorp/setup-terraform@v2.0.2
+
+    ###########################################################
+    # TERRAFORM Block
+    ###########################################################    
+    # Initialize a new or existing Terraform working directory
+    - name: Terraform Init
+      working-directory: ./terraform
+      run: terraform init -backend-config="access_key=a5de553ad15018893b155f2c05acb372fec828f0" -backend-config="secret_key=M6WaS+az37h1qsRcPrjTWc0uQzSv4djZ0/baEwLCCwQ=" -backend-config="region=eu-frankfurt-1"
+
+    # Checks that all Terraform configuration files adhere to a canonical format
+    #- name: Terraform Format
+    #  working-directory: ./terraform
+    #  run: terraform fmt -check -recursive
+
+    ###########################################################
+    # TERRAFORM Block - Create/Push
+    ###########################################################
+    # main branch will use the default workspace
+    - name: Terraform Workspace (Create)
+      if: github.event_name != 'delete' && github.ref_name != 'main'
+      working-directory: ./terraform
+      continue-on-error: true
+      run: |
+        terraform workspace new ${CREATE_BRANCH}
+
+    - name: Terraform Workspace (Select)
+      if: github.event_name != 'delete' && github.ref_name != 'main'
+      working-directory: ./terraform
+      run: |
+        terraform workspace select ${CREATE_BRANCH}
+
+    # Create Resources or regenerate random ADMIN password as it will be exposed
+    # This will also download the wallet for SQLcl
+    - name: Terraform Apply
+      if: github.event_name != 'delete'
+      working-directory: ./terraform
+      run: terraform apply -auto-approve -input=false
+
+    # Obtain lb_deploy command to stdout
+    - name: Terraform Get Commands
+      if: github.event_name != 'delete'
+      working-directory: ./terraform
+      id: lb_deploy
+      run: terraform output -no-color -raw lb_deploy_cmd
+
+    ###########################################################
+    # TERRAFORM Block - Delete
+    ###########################################################
+    - name: Terraform Destroy
+      if: github.event_name == 'delete'
+      working-directory: ./terraform
+      run: |
+        terraform workspace select ${DELETE_BRANCH}
+        terraform destroy -auto-approve -input=false -refresh=false
+        terraform workspace select default
+        terraform workspace delete ${DELETE_BRANCH}
+
+    ###########################################################
+    # LIQUIBASE Block - Using 21.4 for stability
+    ###########################################################
+    # Download SQLcl and Unzip
+    - name: Install SQLcl
+      if: github.event_name != 'delete'
+      run: |
+        wget -q https://download.oracle.com/otn_software/java/sqldeveloper/sqlcl-latest.zip
+        unzip -q -o sqlcl-latest.zip
+        echo "${GITHUB_WORKSPACE}/sqlcl/bin" >> $GITHUB_PATH
+
+    # Run SQLcl Deploy 
+    - name: Run SQLcl LiquiBase
+      if: github.event_name != 'delete'
+      working-directory: ./liquibase
+      env:
+        DEPLOY: "./${{ steps.lb_deploy.outputs.stdout }}"
+      run: |
+        ${DEPLOY[@]}
+
+    ###########################################################
+    # TERRAFORM Block - Randomise ADMIN password
+    ###########################################################
+    # Regenerate random ADMIN password as it was exposed
+    - name: Terraform Init (Destroy Exposed Password)
+      if: github.event_name != 'delete'
+      working-directory: ./terraform
+      run: terraform apply -auto-approve -input=false
