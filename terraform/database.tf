@@ -18,7 +18,7 @@ module "adb_dev" {
   is_always_free  = var.is_always_free
   license_model   = var.license_model
   adb_compartment = "ocid1.compartment.oc1..aaaaaaaaxuczsrb3zug4ftp3oec4nwmxdgzgzjoaed436s62fezhaifzjazq"
-  adb_name        = format("%s%s", replace("POSSUMPRD", "PRD", "DEV"), replace(terraform.workspace, "/-.*/", ""))
+  adb_name        = format("%s%s", replace("ANTPRD", "PRD", "DEV"), replace(terraform.workspace, "/-.*/", ""))
   adb_source      = var.db_clone_source
   adb_source_id   = "ocid1.autonomousdatabase.oc1.eu-frankfurt-1.antheljreicj2tiaahq75srsxvnakxh53jgnyvnbvcvcqewnf7osfo54g5lq"
   adb_clone_type  = "FULL"
