@@ -4,20 +4,20 @@
 // Basic Hidden
 variable "tenancy_ocid" {}
 variable "compartment_ocid" {
-  default = ""
+  default = "ocid1.compartment.oc1..aaaaaaaaloz66dt42pkajyv3qmmx7xlgqwkt5scsapqbbg2zuuvt6clxhfbq"
 }
 
 variable "region" {
-  default = ""
+  default = "eu-frankfurt-1"
 }
 
 // Extra Hidden
 variable "user_ocid" {
-  default = ""
+  default = "ocid1.user.oc1..aaaaaaaaxz4il24t4htkhg7xn7762rqihhuogtllp5d6vx2asmtugfibpzia"
 }
 
 variable "current_user_ocid" {
-  default = ""
+  default = "ocid1.user.oc1..aaaaaaaaxz4il24t4htkhg7xn7762rqihhuogtllp5d6vx2asmtugfibpzia"
 }
 
 variable "fingerprint" {
